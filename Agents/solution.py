@@ -32,6 +32,27 @@ Objective: Navigate to the person, pick them up, and return to the exit as quick
 from robot import Robot, Direction, Position
 
 
+def choseMovement(robot: Robot, target: Position):
+    if robot.sense_fires_around() == 0:
+        moveNormally(robot, target)
+    
+
+
+
+def moveNormally(robot: Robot, target: Position):
+    horizontal_steps = target.x - robot._position.x
+    vertical_steps = target.y - robot._position.y
+    if horizontal_steps > 0:
+        robot.move(Direction.RIGHT)
+    elif horizontal_steps < 0:
+        robot.move(Direction.LEFT)
+    elif vertical_steps > 0:
+        robot.move(Direction.BACKWARD)
+    else:
+        robot.move(Direction.FORWARD)
+        
+
+
 def solve(robot: Robot) -> None:
     """
     Implement your rescue algorithm here.
@@ -54,3 +75,5 @@ def solve(robot: Robot) -> None:
     fire_count = robot.sense_fires_around()
 
     # Navigate to person and return to exit - mission ends automatically!
+    while robot._people_saved < 1:
+        choseMovement(robot, exit_pos if robot.is_carrying_person else person_pos)
