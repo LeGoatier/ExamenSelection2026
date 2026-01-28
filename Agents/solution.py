@@ -33,55 +33,57 @@ from robot import Robot, Direction, Position
 from typing import List, Dict
 
 
-def choseMovement(robot: Robot, target: Position, safe_positions: List[Position], fire_positions: List[Position]):
+def choseMovement(robot: Robot, target: Position, safe_positions: List[Position], fire_positions: List[Position], moves_to_person: List[Direction]):
     horizontal_steps = target.x - robot._position.x
     vertical_steps = target.y - robot._position.y
     
     if robot.sense_fires_around() == 0:
         addSafePositions(robot.position, safe_positions)
-        moveNormally(robot, target)
-        return
-    else:
-        #1 regarder si on peut move à une safe position quand même
-        if horizontal_steps > 0:
-            target_horizontal = Position(robot.position.x + 1, robot.position.y)
-            if target_horizontal in safe_positions:
-                robot.move(Direction.RIGHT)
-                return
-        elif horizontal_steps < 0:
-            target_horizontal = Position(robot.position.x - 1, robot.position.y)
-            if target_horizontal in safe_positions:
-                robot.move(Direction.LEFT)
-                return
         
-        if vertical_steps > 0:
-            target_vertical = Position(robot.position.x, robot.position.y + 1)
-            if target_vertical in safe_positions:
-                robot.move(Direction.BACKWARD)
-                return
-        elif vertical_steps < 0:
-            target_vertical = Position(robot.position.x, robot.position.y - 1)
-            if target_vertical in safe_positions:
-                robot.move(Direction.FORWARD)
-                return
-            
+    #1 regarder si on peut move à une safe position quand même
+    if horizontal_steps > 0:
+        target_horizontal = Position(robot.position.x + 1, robot.position.y)
+        if target_horizontal in safe_positions:
+            robot.move(Direction.RIGHT)
+            moves_to_person.append(Direction.RIGHT)
+            return
+    elif horizontal_steps < 0:
+        target_horizontal = Position(robot.position.x - 1, robot.position.y)
+        if target_horizontal in safe_positions:
+            robot.move(Direction.LEFT)
+            moves_to_person.append(Direction.LEFT)
+            return
+    
+    if vertical_steps > 0:
+        target_vertical = Position(robot.position.x, robot.position.y + 1)
+        if target_vertical in safe_positions:
+            robot.move(Direction.BACKWARD)
+            moves_to_person.append(Direction.BACKWARD)
+            return
+    elif vertical_steps < 0:
+        target_vertical = Position(robot.position.x, robot.position.y - 1)
+        if target_vertical in safe_positions:
+            robot.move(Direction.FORWARD)
+            moves_to_person.append(Direction.FORWARD)
+            return
+        
 
 
-        #2 faire la danse éventuellement
+    #2 faire la danse éventuellement
 
-        #3 Scanner et ajuster les safe positions et les fire positions
-        # Si on se rend ici c'est qu'on sait qu'il y a un feu mais on ne sait pas il se trouve où
-        print("Scanning fires")
-        fires = robot.scan_fires()
-        fire_positions.append(fires)
-        #On note aussi les cases adjacentes qui ne sont pas des feux
-        p = robot.position
-        adjacentPositions = [Position(p.x-1, p.y-1), Position(p.x, p.y-1), Position(p.x+1, p.y-1), Position(p.x-1, p.y), Position(p.x+1, p.y), Position(p.x-1, p.y+1), Position(p.x, p.y+1), Position(p.x+1, p.y+1)]
-        for pos in adjacentPositions:
-            if pos not in fires:
-                safe_positions.append(pos)
+    #3 Scanner et ajuster les safe positions et les fire positions
+    # Si on se rend ici c'est qu'on sait qu'il y a un feu mais on ne sait pas il se trouve où
+    print("Scanning fires")
+    fires = robot.scan_fires()
+    fire_positions.append(fires)
+    #On note aussi les cases adjacentes qui ne sont pas des feux
+    p = robot.position
+    adjacentPositions = [Position(p.x-1, p.y-1), Position(p.x, p.y-1), Position(p.x+1, p.y-1), Position(p.x-1, p.y), Position(p.x+1, p.y), Position(p.x-1, p.y+1), Position(p.x, p.y+1), Position(p.x+1, p.y+1)]
+    for pos in adjacentPositions:
+        if pos not in fires:
+            safe_positions.append(pos)
 
-        return
+    return
 
 
 def addSafePositions(pos: Position, safePos: List[Position]):
@@ -97,6 +99,7 @@ def moveNormally(robot: Robot, target: Position):
     vertical_steps = target.y - robot._position.y
     if horizontal_steps > 0:
         robot.move(Direction.RIGHT)
+
     elif horizontal_steps < 0:
         robot.move(Direction.LEFT)
     elif vertical_steps > 0:
@@ -104,7 +107,17 @@ def moveNormally(robot: Robot, target: Position):
     else:
         robot.move(Direction.FORWARD)
         
-
+def inversePath(robot: Robot, moves: List[Direction]):
+    while len(moves) > 0:
+        dir = moves.pop()
+        if(dir == Direction.RIGHT):
+            robot.move(Direction.LEFT)
+        elif(dir == Direction.LEFT):
+            robot.move(Direction.RIGHT)
+        elif(dir == Direction.FORWARD):
+            robot.move(Direction.BACKWARD)
+        else:
+            robot.move(Direction.FORWARD)
 
 def solve(robot: Robot) -> None:
     """
@@ -126,9 +139,12 @@ def solve(robot: Robot) -> None:
 
     safe_positions = [exit_pos, person_pos]
     fire_positions = []
+    moves_to_person = []
     
     attemps = 0
     # Navigate to person and return to exit - mission ends automatically!
-    while robot._people_saved < 1 and attemps < 50:
-        choseMovement(robot, exit_pos if robot.is_carrying_person else person_pos, safe_positions, fire_positions)
+    while not robot.is_carrying_person and attemps < 50:
+        choseMovement(robot, person_pos, safe_positions, fire_positions, moves_to_person)
         attemps +=1
+
+    inversePath(robot, moves_to_person)
