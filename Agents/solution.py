@@ -30,12 +30,65 @@ Objective: Navigate to the person, pick them up, and return to the exit as quick
 """
 
 from robot import Robot, Direction, Position
+from typing import List, Dict
 
 
-def choseMovement(robot: Robot, target: Position):
-    if robot.sense_fires_around() == 0:
-        moveNormally(robot, target)
+def choseMovement(robot: Robot, target: Position, safe_positions: List[Position], fire_positions: List[Position]):
+    horizontal_steps = target.x - robot._position.x
+    vertical_steps = target.y - robot._position.y
     
+    if robot.sense_fires_around() == 0:
+        addSafePositions(robot.position, safe_positions)
+        moveNormally(robot, target)
+        return
+    else:
+        #1 regarder si on peut move à une safe position quand même
+        if horizontal_steps > 0:
+            target_horizontal = Position(robot.position.x + 1, robot.position.y)
+            if target_horizontal in safe_positions:
+                robot.move(Direction.RIGHT)
+                return
+        elif horizontal_steps < 0:
+            target_horizontal = Position(robot.position.x - 1, robot.position.y)
+            if target_horizontal in safe_positions:
+                robot.move(Direction.LEFT)
+                return
+        
+        if vertical_steps > 0:
+            target_vertical = Position(robot.position.x, robot.position.y + 1)
+            if target_vertical in safe_positions:
+                robot.move(Direction.BACKWARD)
+                return
+        elif vertical_steps < 0:
+            target_vertical = Position(robot.position.x, robot.position.y - 1)
+            if target_vertical in safe_positions:
+                robot.move(Direction.FORWARD)
+                return
+            
+
+
+        #2 faire la danse éventuellement
+
+        #3 Scanner et ajuster les safe positions et les fire positions
+        # Si on se rend ici c'est qu'on sait qu'il y a un feu mais on ne sait pas il se trouve où
+        print("Scanning fires")
+        fires = robot.scan_fires()
+        fire_positions.append(fires)
+        #On note aussi les cases adjacentes qui ne sont pas des feux
+        p = robot.position
+        adjacentPositions = [Position(p.x-1, p.y-1), Position(p.x, p.y-1), Position(p.x+1, p.y-1), Position(p.x-1, p.y), Position(p.x+1, p.y), Position(p.x-1, p.y+1), Position(p.x, p.y+1), Position(p.x+1, p.y+1)]
+        for pos in adjacentPositions:
+            if pos not in fires:
+                safe_positions.append(pos)
+
+        return
+
+
+def addSafePositions(pos: Position, safePos: List[Position]):
+    safePos.append(Position(pos.x, pos.y+1))
+    safePos.append(Position(pos.x, pos.y-1))
+    safePos.append(Position(pos.x+1, pos.y))
+    safePos.append(Position(pos.x-1, pos.y))
 
 
 
@@ -71,9 +124,11 @@ def solve(robot: Robot) -> None:
     exit_pos = robot.get_exit_position()
     person_pos = robot.get_person_position()
 
-    # Example: Check for nearby fires
-    fire_count = robot.sense_fires_around()
-
+    safe_positions = [exit_pos, person_pos]
+    fire_positions = []
+    
+    attemps = 0
     # Navigate to person and return to exit - mission ends automatically!
-    while robot._people_saved < 1:
-        choseMovement(robot, exit_pos if robot.is_carrying_person else person_pos)
+    while robot._people_saved < 1 and attemps < 50:
+        choseMovement(robot, exit_pos if robot.is_carrying_person else person_pos, safe_positions, fire_positions)
+        attemps +=1
