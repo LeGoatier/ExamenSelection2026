@@ -62,12 +62,9 @@ def choseMovement(robot: Robot, target: Position, safe_positions: List[Position]
             for pos in orthogonal_positions:
                 if pos not in fires_sensed:
                     safe_positions.append(pos)
-
+        # Le module suivant ne semble pas fonctionner mais j'ai pas le temps de figure out pourquoi
         if len(unknown_orthogonal_positions) == fires_sensed - known_fires:
             fire_positions.append(unknown_orthogonal_positions)
-            # for pos in unknown_orthogonal_positions:
-            #     fire_positions.append(pos)
-
 
     
     #1 Si on peut se déplacer dans une direction qu'on souhaite, on le fait (greedy)
@@ -120,7 +117,6 @@ def choseMovement(robot: Robot, target: Position, safe_positions: List[Position]
 
     #3 Scanner et ajuster les safe positions et les fire positions
     # Si on se rend ici c'est qu'on sait qu'il y a un feu mais on ne sait pas il se trouve où
-    print("Scanning fires")
     fires = robot.scan_fires()
     fire_positions.append(fires)
     #On note aussi les cases adjacentes qui ne sont pas des feux
