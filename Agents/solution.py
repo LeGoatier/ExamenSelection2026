@@ -37,40 +37,60 @@ def choseMovement(robot: Robot, target: Position, safe_positions: List[Position]
     horizontal_steps = target.x - robot._position.x
     vertical_steps = target.y - robot._position.y
     explored_positions.add(robot.position)
-    
-    if robot.sense_fires_around() == 0:
-        addSafePositions(robot.position, safe_positions)
-        #possibilité d'améliorer ce module avec de la mémoire
-        
+
+    fires_sensed = robot.sense_fires_around()
+
     right_position = Position(robot.position.x + 1, robot.position.y)
     left_position = Position(robot.position.x - 1, robot.position.y)
     down_position = Position(robot.position.x, robot.position.y + 1)
     up_position = Position(robot.position.x, robot.position.y - 1)
+    
+    orthogonal_positions = {right_position, left_position, down_position, up_position}
+    valid_orthogonal_positions = list(filter(lambda pos: pos.x >= 0 and pos.y >= 0 and pos.x <= robot.get_grid_dimensions()[0] and pos.y <= robot.get_grid_dimensions()[1], orthogonal_positions))
+    unknown_orthogonal_positions = list(filter(lambda pos: (pos not in safe_positions and pos not in fire_positions), valid_orthogonal_positions))
+    
+    # Détection avec fires sensed pour mettre à jour les feux qu'on connait
+    if fires_sensed == 0:
+        addSafePositions(robot.position, safe_positions)
+    else:
+        #On doit calculer les feux qu'on sait déjà qui se trouvent autour de nous
+        known_fires = 0
+        for pos in orthogonal_positions:
+            if pos in fire_positions:
+                known_fires += 1
+        if known_fires == fires_sensed:
+            for pos in orthogonal_positions:
+                if pos not in fires_sensed:
+                    safe_positions.append(pos)
+
+        if len(unknown_orthogonal_positions) == fires_sensed - known_fires:
+            fire_positions.append(unknown_orthogonal_positions)
+            # for pos in unknown_orthogonal_positions:
+            #     fire_positions.append(pos)
+
+
+    
     #1 Si on peut se déplacer dans une direction qu'on souhaite, on le fait (greedy)
     if horizontal_steps > 0:
         if right_position in safe_positions and right_position not in explored_positions:
             robot.move(Direction.RIGHT)
             moves_to_person.append(Direction.RIGHT)
-            print("Right")
             return
     elif horizontal_steps < 0:
         if left_position in safe_positions and left_position not in explored_positions:
             robot.move(Direction.LEFT)
             moves_to_person.append(Direction.LEFT)
-            print("Left")
             return
     
     if vertical_steps > 0:
         if down_position in safe_positions and down_position not in explored_positions:
             robot.move(Direction.BACKWARD)
             moves_to_person.append(Direction.BACKWARD)
-            print("Down")
             return
     elif vertical_steps < 0:
         if up_position in safe_positions and up_position not in explored_positions:
             robot.move(Direction.FORWARD)
             moves_to_person.append(Direction.FORWARD)
-            print("Up")
             return
         
 
@@ -82,24 +102,20 @@ def choseMovement(robot: Robot, target: Position, safe_positions: List[Position]
         if left_position in safe_positions and left_position not in explored_positions:
             robot.move(Direction.LEFT)
             moves_to_person.append(Direction.LEFT)
-            print("left")
             return
         elif right_position in safe_positions and right_position not in explored_positions:
             robot.move(Direction.RIGHT)
             moves_to_person.append(Direction.RIGHT)
-            print("right")
             return
         
     if(vertical_steps == 0):
         if up_position in safe_positions and up_position not in explored_positions:
             robot.move(Direction.FORWARD)
             moves_to_person.append(Direction.FORWARD)
-            print("up")
             return
         elif down_position in safe_positions and down_position not in explored_positions:
             robot.move(Direction.BACKWARD)
             moves_to_person.append(Direction.BACKWARD)
-            print("down")
             return
 
     #3 Scanner et ajuster les safe positions et les fire positions
